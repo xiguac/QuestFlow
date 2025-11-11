@@ -1,6 +1,5 @@
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/xiguac/QuestFlow/main/.github/assets/logo.png" alt="QuestFlow Logo" width="180"/>
 
   <h1>QuestFlow 🌊</h1>
 
@@ -162,11 +161,6 @@ You'll need two separate terminals for the backend and one for the frontend.
 
 ✅ **You're all set!** Open your browser to `http://localhost:5173` and start exploring QuestFlow.
 
-## 📚 API Documentation
-
-Our API is fully documented with detailed information on every endpoint, including request/response schemas and examples. This is the ultimate guide for frontend development or third-party integrations.
-
-### **[➡️ Read the Full API Documentation](./API.md)**
 
 ## 🤝 How to Contribute
 
