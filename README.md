@@ -26,7 +26,7 @@
 
 ---
 
-> ✨ **Project Status:** The backend is feature-complete, robust, and ready for production. The Vue 3 frontend is currently under active development. Join us and contribute!
+> ✨ **Project Status:** This project is actively under development. The core backend architecture is stable and functional. The Vue 3 frontend is evolving rapidly. Join us on this exciting journey!
 
 ## 🚀 Core Philosophy: Metadata-Driven Design
 
@@ -37,9 +37,9 @@ This approach provides **unparalleled extensibility**. Want to add a new "file u
 ```json
 {
   "title": "Your Awesome Form",
+  "description": "A brief description here.",
   "definition": {
-    "type": "exam", // Could be "questionnaire", "registration", etc.
-    "settings": { "timeLimit": 3600 },
+    "settings": { "type": "exam", "timeLimit": 3600 },
     "questions": [
       // ... your array of question objects
     ]
@@ -56,20 +56,20 @@ QuestFlow is built to handle massive, spiky traffic without breaking a sweat.
 *   **Decoupled Consumer Service:** A separate Go microservice (the consumer) reads from the message queue at a steady pace and writes to the database. This "shock absorption" system protects your database from being overwhelmed during peak traffic, ensuring system stability.
 *   **Blazing Fast Go Backend:** Leveraging the power of Go's concurrency and the high-performance Gin framework, the API server is designed for low latency and a small memory footprint.
 
-### 🎨 Powerful & Intuitive Form Builder (Frontend - In Progress)
+### 🎨 Powerful & Intuitive Form Builder (Frontend)
 Creating beautiful forms should be a joy, not a chore.
 
 *   **Drag & Drop Interface:** Visually construct your forms by dragging components from a palette onto a canvas.
 *   **Real-time Preview:** See exactly what your users will see as you build.
 *   **Rich Question Types:** From basic multiple choice and text inputs to more advanced options, all fully customizable.
-*   **Advanced Settings:** Configure submission deadlines, response limits, password protection, and more for each form.
+*   **Advanced Settings:** Configure submission deadlines, response limits, and more for each form.
 
 ### 🔐 Enterprise-Grade Security
 Security is not an afterthought; it's a core design principle.
 
 *   **Stateless JWT Authentication:** Secure and scalable authentication using JSON Web Tokens.
 *   **Robust Authorization:** Clear separation of permissions. A user can *only* access and manage the forms they create.
-*   **Built-in Protection:** Out-of-the-box defense against common web vulnerabilities, including SQL Injection (via GORM's prepared statements), XSS (proper output escaping), and CSRF (inherently mitigated by JWT Bearer token usage).
+*   **Environment-based Secrets:** No hardcoded passwords or keys. All sensitive information is loaded from environment variables, following best practices for security.
 
 ### 📊 Insightful Analytics
 Turn raw data into actionable insights.
@@ -90,19 +90,20 @@ Turn raw data into actionable insights.
 |               | 🔑 [Go-JWT](https://github.com/golang-jwt/jwt) (Auth)          |
 |               | ⚙️ [Viper](https://github.com/spf13/viper) (Configuration)     |
 | **Frontend**    | 💚 **Vue 3** (Framework)                                   |
-|               |  Vite (Build Tool)                                        |
+|               | 🚀 [Vite](https://vitejs.dev/) (Build Tool)                                        |
 |               | 🍍 [Pinia](https://pinia.vuejs.org/) (State Management)      |
 |               | 🎨 [Element Plus](https://element-plus.org/) (UI Components) |
-|               | 📊 [ECharts](https://echarts.apache.org/) (Data Visualization) |
+|               | 📊 *ECharts (Planned)* (Data Visualization) |
 |               | 📡 [Axios](https://axios-http.com/) (HTTP Client)            |
 
 ## 🚀 Getting Started
 
-Get the QuestFlow backend up and running on your local machine in minutes.
+Get the full QuestFlow stack up and running on your local machine.
 
 ### Prerequisites
 
 *   [Go](https://go.dev/doc/install) (v1.18+)
+*   [Node.js](https://nodejs.org/) (v18+)
 *   [MySQL](https://dev.mysql.com/downloads/mysql/) (v8.0+)
 *   [Redis](https://redis.io/topics/quickstart)
 
@@ -114,51 +115,52 @@ cd QuestFlow
 
 ### 2. Configure Your Environment
 
-1.  Create a fresh MySQL database:
+1.  **Create a fresh MySQL database** and a dedicated user:
     ```sql
     CREATE DATABASE questflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE USER 'questflow_user'@'localhost' IDENTIFIED BY 'your_strong_password';
+    GRANT ALL PRIVILEGES ON questflow.* TO 'questflow_user'@'localhost';
+    FLUSH PRIVILEGES;
     ```
-2.  Copy the example configuration file:
+2.  **Set up Backend Configuration:**
+    *   Copy the example config: `cp configs/config.example.yaml configs/config.yaml`
+    *   Create a local environment file (this is ignored by Git): `touch .env`
+    *   Add your secrets to the `.env` file. This file will override any empty values in `config.yaml`.
+
+    **File: `.env`**
+    ```dotenv
+    # Database password
+    DATABASE_PASSWORD=your_strong_password
+
+    # ❗️ IMPORTANT: Generate a long, random, and secret string for JWT!
+    JWT_SECRET=replace-this-with-a-very-secure-random-string-!@#$%^
+    ```
+3.  **Review `configs/config.yaml`:**
+    Ensure the database `user`, `host`, `dbname`, and Redis settings match your local environment. The `password` and `secret` fields should be left empty as they are loaded from `.env`.
+
+### 3. Run the Services
+
+You'll need two separate terminals for the backend and one for the frontend.
+
+1.  **Terminal 1: Start the Backend API Server**
     ```bash
-    cp configs/config.example.yaml configs/config.yaml
-    ```
-3.  Edit `configs/config.yaml` with your database and Redis credentials. **Crucially, set a strong, unique `jwt.secret`!**
-
-    ```yaml
-    database:
-      # Replace with your MySQL DSN (user:password@tcp(host:port)/dbname)
-      dsn: "root:your_password@tcp(127.0.0.1:3306)/questflow?charset=utf8mb4&parseTime=True&loc=Local"
-    
-    redis:
-      addr: "127.0.0.1:6379"
-      password: "" # Your Redis password, if any
-
-    jwt:
-      # ❗️ IMPORTANT: Change this to a long, random, and secret string!
-      secret: "replace-this-with-a-very-secure-random-string-!@#$%^"
-    ```
-
-### 3. Run the Backend Services
-
-The backend consists of two services. You'll need two separate terminal windows to run them.
-
-1.  **Install Go dependencies:**
-    ```bash
+    # Install Go dependencies
     go mod tidy
+    
+    # Run the server (it will also auto-migrate the database)
+    go run ./cmd/server/main.go
     ```
-2.  **Terminal 1: Start the API Server**
-    This service handles all HTTP requests. Database tables are automatically migrated on the first run.
-    ```bash
-    go run ./cmd/server/
-    ```
+    The API is now running at `http://localhost:8080`.
 
-3.  **Terminal 2: Start the Submissions Consumer**
-    This service processes the submission queue.
+2.  **Terminal 2: Start the Frontend Dev Server**
     ```bash
-    go run ./cmd/consumer/
+    cd frontend
+    npm install
+    npm run dev
     ```
+    The web interface is now available at `http://localhost:5173`.
 
-✅ **You're all set!** The QuestFlow backend is now live on `http://localhost:8080`.
+✅ **You're all set!** Open your browser to `http://localhost:5173` and start exploring QuestFlow.
 
 ## 📚 API Documentation
 
@@ -168,14 +170,20 @@ Our API is fully documented with detailed information on every endpoint, includi
 
 ## 🤝 How to Contribute
 
-We welcome contributions of all kinds! Whether you're a Go guru, a Vue virtuoso, or just passionate about great software, we'd love your help.
+We welcome contributions of all kinds with open arms! Whether you're a Go guru, a Vue virtuoso, or just passionate about great software, we'd love your help.
 
 1.  **Fork** the repository.
 2.  Create your **Feature Branch** (`git checkout -b feature/AmazingFeature`).
-3.  **Commit** your Changes (`git commit -m 'Add some AmazingFeature'`).
+3.  **Commit** your Changes (`git commit -m 'feat: Add some AmazingFeature'`).
 4.  **Push** to the Branch (`git push origin feature/AmazingFeature`).
 5.  Open a **Pull Request**.
+
+Check out our [open issues](https://github.com/xiguac/QuestFlow/issues) to find a good place to start!
 
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+> **Note on AI-Generated Comments**: Some of the code comments within this project may have been partially generated by AI assistants (like Microsoft Copilot or GitHub Copilot) for expediency. While they are reviewed for correctness, they may not always be perfectly accurate or reflect the full intent of the code. Always trust the code itself as the primary source of truth.
