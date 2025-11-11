@@ -1,0 +1,133 @@
+<template>
+  <el-container class="layout-container">
+    <!-- 左侧菜单 -->
+    <el-aside width="200px" class="aside">
+      <div class="logo-container">
+        🌊 QuestFlow
+      </div>
+      <el-menu
+        :default-active="activeMenu"
+        class="aside-menu"
+        router
+      >
+        <el-menu-item index="/dashboard">
+          <el-icon><DataAnalysis /></el-icon>
+          <span>我的表单</span>
+        </el-menu-item>
+        <el-menu-item index="/editor/new">
+          <el-icon><Plus /></el-icon>
+          <span>创建表单</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <!-- 右侧主内容区 -->
+    <el-container class="main-container">
+      <!-- 顶部 Header -->
+      <el-header class="header">
+        <div><!-- 预留给面包屑导航 --></div>
+        <div class="user-info">
+          <el-dropdown>
+            <span class="el-dropdown-link">
+              <el-avatar size="small" :src="avatarUrl" />
+              <span class="username">{{ userStore.userInfo.username }}</span>
+              <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item>个人中心</el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </el-header>
+
+      <!-- 内容区域 Main -->
+      <el-main class="main-content">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import {
+  DataAnalysis,
+  Plus,
+  ArrowDown,
+} from '@element-plus/icons-vue'
+
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
+
+const activeMenu = computed(() => route.path)
+const avatarUrl = computed(() => `https://i.pravatar.cc/150?u=${userStore.userInfo.username}`)
+
+const handleLogout = () => {
+  userStore.logout()
+  router.push('/login')
+}
+</script>
+
+<style lang="scss" scoped>
+.layout-container {
+  height: 100vh;
+}
+
+.aside {
+  background-color: #f5f7fa; // 侧边栏背景色
+  border-right: 1px solid #e6e6e6;
+  .logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #409eff;
+  }
+  .aside-menu {
+    border-right: none; // 移除 el-menu 默认的右边框
+  }
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+
+  .header {
+    background-color: #ffffff; // Header 背景色
+    border-bottom: 1px solid #e6e6e6;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0; // 防止 Header 在 flex 布局中被压缩
+
+    .user-info .el-dropdown-link {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      .username {
+        margin-left: 8px;
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .main-content {
+    background-color: #f0f2f5; // 主内容区背景色，用于调试
+    padding: 20px;
+    flex-grow: 1; // 占据所有剩余的垂直空间
+    overflow-y: auto; // 内容超出时允许垂直滚动
+  }
+}
+</style>

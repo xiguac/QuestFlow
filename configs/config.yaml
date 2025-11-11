@@ -1,0 +1,39 @@
+# QuestFlow 应用配置
+app:
+  port: ":8080"
+  mode: "release" # debug, release, test
+
+# 数据库配置
+database:
+  driver: "mysql"
+  # MySQL 连接ip
+  host: "127.0.0.1"
+  # MySQL 连接端口
+  port: "3306"
+  # MySQL 用户名
+  user: "questflow_user"  
+  # MySQL 密码
+  password: "questflow_password"
+  # MySQL 数据库名
+  dbname: "questflow"
+  params: "charset=utf8mb4&parseTime=True&loc=Local"
+
+# Redis 配置
+redis:
+  # Redis 连接地址
+  addr: "127.0.0.1:6379"
+  # Redis 密码
+  password: ""
+  # Redis 数据库索引
+  db: 0
+  submission_stream_key: "questflow:submissions"
+  submission_group_name: "questflow_group"
+
+# JWT 配置
+jwt:
+  # JWT 密钥
+  secret: "a-secure-and-long-secret-key-for-questflow"
+  # JWT 发行者
+  issuer: "questflow-api"
+  # JWT 过期时间（小时）
+  expire_hours: 72
