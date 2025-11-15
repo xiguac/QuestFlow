@@ -27,8 +27,8 @@
             <el-input v-model="editorStore.formDefinition.questions[selectedQuestionIndex].title" type="textarea" :rows="2" />
           </el-form-item>
 
-          <!-- 特定题型的设置，例如单选题的选项 -->
-          <div v-if="selectedQuestion.type === 'single_choice'">
+          <!-- 【核心改动】单选题 或 多选题 的选项设置 -->
+          <div v-if="(selectedQuestion.type === 'single_choice' || selectedQuestion.type === 'multi_choice') && selectedQuestion.options">
             <el-divider>选项设置</el-divider>
             <div
               v-for="(option, index) in selectedQuestion.options"
@@ -37,7 +37,9 @@
             >
               <el-input v-model="editorStore.formDefinition.questions[selectedQuestionIndex].options[index].text" placeholder="请输入选项内容">
                 <template #prepend>
-                  <el-radio :label="option.id" :model-value="null" disabled />
+                  <!-- 根据题型显示 Radio 或 Checkbox -->
+                  <el-radio v-if="selectedQuestion.type === 'single_choice'" :label="option.id" :model-value="null" disabled />
+                  <el-checkbox v-if="selectedQuestion.type === 'multi_choice'" :label="option.id" :model-value="[]" disabled />
                 </template>
                 <template #append>
                   <el-button
@@ -56,6 +58,13 @@
               添加选项
             </el-button>
           </div>
+
+          <!-- 判断题的提示 -->
+          <div v-if="selectedQuestion.type === 'judgment'">
+            <el-divider>选项设置</el-divider>
+            <el-alert title="判断题的选项固定为“正确”和“错误”，无需编辑。" type="info" :closable="false" />
+          </div>
+
         </el-form>
       </el-card>
     </div>
@@ -86,29 +95,34 @@ const selectedQuestion = computed(() => {
   return null
 })
 
+
 const getQuestionTypeText = (type: string) => {
   switch (type) {
     case 'single_choice': return '单选题'
+    case 'multi_choice': return '多选题'
+    case 'judgment': return '判断题'
     case 'text_input': return '文本题'
     default: return '未知题型'
   }
 }
 
 const addOption = () => {
-  if (selectedQuestion.value && selectedQuestion.value.type === 'single_choice') {
-    if (!selectedQuestion.value.options) {
+  const q = selectedQuestion.value
+  if (q && (q.type === 'single_choice' || q.type === 'multi_choice')) {
+    if (!q.options) {
       editorStore.formDefinition.questions[selectedQuestionIndex.value].options = []
     }
 
     editorStore.formDefinition.questions[selectedQuestionIndex.value].options.push({
       id: uuidv4(),
-      text: `新选项 ${selectedQuestion.value.options.length + 1}`
+      text: `新选项 ${q.options.length + 1}`
     })
   }
 }
 
 const removeOption = (index: number) => {
-  if (selectedQuestion.value && selectedQuestion.value.options) {
+  const q = selectedQuestion.value
+  if (q && (q.type === 'single_choice' || q.type === 'multi_choice') && q.options) {
     editorStore.formDefinition.questions[selectedQuestionIndex.value].options.splice(index, 1)
   }
 }
@@ -125,9 +139,9 @@ const removeOption = (index: number) => {
 .option-item {
   margin-bottom: 10px;
   :deep(.el-input-group__prepend) {
-    .el-radio {
+    .el-radio, .el-checkbox {
       margin-right: 0;
-      .el-radio__label {
+      .el-radio__label, .el-checkbox__label {
         display: none;
       }
     }

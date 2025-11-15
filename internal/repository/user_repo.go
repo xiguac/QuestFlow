@@ -11,7 +11,8 @@ import (
 type UserRepository interface {
 	Create(user *model.User) error
 	FindByUsername(username string) (*model.User, error)
-	// 未来可以添加 FindByID, Update, Delete 等方法
+	FindByID(id uint) (*model.User, error)
+	Update(user *model.User) error
 }
 
 // userGormRepository 是 UserRepository 的 GORM 实现
@@ -37,4 +38,19 @@ func (r *userGormRepository) FindByUsername(username string) (*model.User, error
 		return nil, err
 	}
 	return &user, nil
+}
+
+// FindByID 通过用户 ID 查找用户
+func (r *userGormRepository) FindByID(id uint) (*model.User, error) {
+	var user model.User
+	err := r.db.First(&user, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// Update 更新用户信息
+func (r *userGormRepository) Update(user *model.User) error {
+	return r.db.Save(user).Error
 }

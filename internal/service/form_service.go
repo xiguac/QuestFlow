@@ -2,10 +2,12 @@
 package service
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"questflow/internal/model"
 	"questflow/internal/repository"
+	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -59,17 +61,20 @@ type FormService interface {
 	GetFormForEditing(formID uint, userID uint) (*model.Form, error)
 	UpdateForm(formID, userID uint, title, description string, definition datatypes.JSON) (*model.Form, error)
 	UpdateFormStatus(formID, userID uint, status uint8) error
+	ExportFormSubmissions(formID, userID uint, startTime, endTime *time.Time, conditions []repository.FilterCondition) (*bytes.Buffer, *model.Form, error)
 }
 
 type formServiceImpl struct {
 	formRepo       repository.FormRepository
 	submissionRepo repository.SubmissionRepository
+	excelService   ExcelService
 }
 
 func NewFormService(formRepo repository.FormRepository, submissionRepo repository.SubmissionRepository) FormService {
 	return &formServiceImpl{
 		formRepo:       formRepo,
 		submissionRepo: submissionRepo,
+		excelService:   NewExcelService(),
 	}
 }
 
@@ -156,7 +161,6 @@ func (s *formServiceImpl) GetFormsByCreator(userID uint) ([]model.Form, error) {
 
 // DeleteForm 处理删除表单的业务逻辑
 func (s *formServiceImpl) DeleteForm(formID uint, userID uint) error {
-	// 1. 查找表单
 	form, err := s.formRepo.FindByID(formID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -164,14 +168,49 @@ func (s *formServiceImpl) DeleteForm(formID uint, userID uint) error {
 		}
 		return err
 	}
-
-	// 2. 验证权限：只有创建者才能删除
 	if form.CreatorID != userID {
 		return errors.New("access denied")
 	}
-
-	// 3. 执行删除
 	return s.formRepo.Delete(form)
+}
+
+// ExportFormSubmissions 实现导出业务逻辑
+func (s *formServiceImpl) ExportFormSubmissions(formID, userID uint, startTime, endTime *time.Time, conditions []repository.FilterCondition) (*bytes.Buffer, *model.Form, error) {
+	// 1. 获取表单并进行权限验证
+	form, err := s.formRepo.FindByID(formID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, errors.New("form not found")
+		}
+		return nil, nil, err
+	}
+	if form.CreatorID != userID {
+		return nil, nil, errors.New("access denied")
+	}
+
+	// 2. 解析表单定义
+	var def formDefinition
+	if err := json.Unmarshal(form.Definition, &def); err != nil {
+		return nil, nil, errors.New("failed to parse form definition")
+	}
+
+	// 3. 根据筛选条件获取提交记录
+	submissions, err := s.submissionRepo.FindWithFilters(formID, startTime, endTime, conditions)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(submissions) == 0 {
+		return nil, nil, errors.New("no submissions found for the given criteria")
+	}
+
+	// 4. 调用 ExcelService 生成文件流
+	buffer, err := s.excelService.ExportSubmissionsToExcel(&def, submissions)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return buffer, form, nil
 }
 
 // GetFormStatistics
@@ -230,14 +269,27 @@ func (s *formServiceImpl) GetFormStatistics(formID uint, userID uint) (*FormStat
 				continue
 			}
 
+			// 确保为每个问题初始化统计map
+			if _, exists := tempStats[qID]; !exists {
+				tempStats[qID] = make(map[string]int)
+			}
+
 			switch qDef.Type {
-			case "single_choice":
+			// 单选题和判断题的答案是 string
+			case "single_choice", "judgment":
 				if optID, ok := ans.(string); ok {
-					if _, exists := tempStats[qID]; !exists {
-						tempStats[qID] = make(map[string]int)
-					}
 					tempStats[qID][optID]++
 				}
+			// 多选题的答案是 []string
+			case "multi_choice":
+				if opts, ok := ans.([]interface{}); ok {
+					for _, opt := range opts {
+						if optID, ok := opt.(string); ok {
+							tempStats[qID][optID]++
+						}
+					}
+				}
+			// 填空题的答案是 string
 			case "text_input":
 				if text, ok := ans.(string); ok {
 					tempTextAnswers[qID] = append(tempTextAnswers[qID], text)
@@ -254,16 +306,20 @@ func (s *formServiceImpl) GetFormStatistics(formID uint, userID uint) (*FormStat
 			Title:        qDef.Title,
 		}
 
-		if qDef.Type == "single_choice" || qDef.Type == "multi_choice" {
+		// 统一处理所有基于选项的题型
+		if qDef.Type == "single_choice" || qDef.Type == "multi_choice" || qDef.Type == "judgment" {
+			// 初始化所有选项的计数为0
 			optionCounts := make(map[string]int)
 			for _, opt := range qDef.Options {
 				optionCounts[opt.ID] = 0
 			}
+			// 如果有统计数据，则填充
 			if counts, ok := tempStats[qDef.ID]; ok {
 				for optID, count := range counts {
 					optionCounts[optID] = count
 				}
 			}
+			// 转换为最终的数组格式
 			qStat.OptionStats = make([]OptionStat, 0, len(qDef.Options))
 			for _, opt := range qDef.Options {
 				qStat.OptionStats = append(qStat.OptionStats, OptionStat{

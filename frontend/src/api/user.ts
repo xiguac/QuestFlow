@@ -18,6 +18,12 @@ interface LoginResponse {
   user_info: UserInfo
 }
 
+// 新增：更新用户信息请求类型
+export interface UpdateProfileRequest {
+  username?: string;
+  password?: string;
+}
+
 // --- API 函数 ---
 
 /**
@@ -28,6 +34,14 @@ export const loginAPI = (data: LoginRequest) => {
   return request<any, LoginResponse>({
     url: '/users/login',
     method: 'POST',
+    data
+  })
+}
+
+export const updateProfileAPI = (data: UpdateProfileRequest) => {
+  return request<any, null>({ // 成功时后端不返回 data
+    url: '/users/profile',
+    method: 'PUT',
     data
   })
 }

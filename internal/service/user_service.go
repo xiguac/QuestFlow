@@ -24,6 +24,7 @@ type CustomClaims struct {
 type UserService interface {
 	Register(username, password string, email *string) (*model.User, error)
 	Login(username, password string) (string, *model.User, error) // 返回 token 和用户信息
+	UpdateProfile(userID uint, newUsername, newPassword string) (*model.User, error)
 }
 
 // userServiceImpl 是 UserService 的实现
@@ -88,6 +89,42 @@ func (s *userServiceImpl) Login(username, password string) (string, *model.User,
 	}
 
 	return token, user, nil
+}
+
+// UpdateProfile 处理更新用户信息的业务逻辑
+func (s *userServiceImpl) UpdateProfile(userID uint, newUsername, newPassword string) (*model.User, error) {
+	// 1. 查找当前用户
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	// 2. 如果提供了新用户名，则更新
+	if newUsername != "" && newUsername != user.Username {
+		// 检查新用户名是否已被占用
+		existingUser, err := s.userRepo.FindByUsername(newUsername)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err // 数据库查询错误
+		}
+		if existingUser != nil {
+			return nil, errors.New("new username is already taken")
+		}
+		user.Username = newUsername
+	}
+
+	// 3. 如果提供了新密码，则更新
+	if newPassword != "" {
+		if err := user.SetPassword(newPassword); err != nil {
+			return nil, errors.New("failed to update password")
+		}
+	}
+
+	// 4. 保存到数据库
+	if err := s.userRepo.Update(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // generateToken 为指定用户生成 JWT

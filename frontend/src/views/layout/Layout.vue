@@ -27,7 +27,7 @@
       <el-header class="header">
         <div><!-- 预留给面包屑导航 --></div>
         <div class="user-info">
-          <el-dropdown>
+          <el-dropdown @command="handleCommand">
             <span class="el-dropdown-link">
               <el-avatar size="small" :src="avatarUrl" />
               <span class="username">{{ userStore.userInfo.username }}</span>
@@ -35,8 +35,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>个人中心</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
                   退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -74,15 +74,22 @@ const handleLogout = () => {
   userStore.logout()
   router.push('/login')
 }
+
+const handleCommand = (command: string) => {
+  if (command === 'logout') {
+    handleLogout()
+  } else if (command === 'profile') {
+    router.push('/profile')
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .layout-container {
   height: 100vh;
 }
-
 .aside {
-  background-color: #f5f7fa; // 侧边栏背景色
+  background-color: #f5f7fa;
   border-right: 1px solid #e6e6e6;
   .logo-container {
     display: flex;
@@ -94,24 +101,21 @@ const handleLogout = () => {
     color: #409eff;
   }
   .aside-menu {
-    border-right: none; // 移除 el-menu 默认的右边框
+    border-right: none;
   }
 }
-
 .main-container {
   display: flex;
   flex-direction: column;
-
   .header {
-    background-color: #ffffff; // Header 背景色
+    background-color: #ffffff;
     border-bottom: 1px solid #e6e6e6;
     height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    flex-shrink: 0; // 防止 Header 在 flex 布局中被压缩
-
+    flex-shrink: 0;
     .user-info .el-dropdown-link {
       cursor: pointer;
       display: flex;
@@ -122,12 +126,11 @@ const handleLogout = () => {
       }
     }
   }
-
   .main-content {
-    background-color: #f0f2f5; // 主内容区背景色，用于调试
+    background-color: #f0f2f5;
     padding: 20px;
-    flex-grow: 1; // 占据所有剩余的垂直空间
-    overflow-y: auto; // 内容超出时允许垂直滚动
+    flex-grow: 1;
+    overflow-y: auto;
   }
 }
 </style>

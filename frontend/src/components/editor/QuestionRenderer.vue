@@ -6,7 +6,7 @@
       {{ question.title }}
     </h4>
 
-    <!-- 根据题型渲染不同的预览 -->
+    <!-- 单选题预览 -->
     <div v-if="question.type === 'single_choice'" class="options-container">
       <el-radio-group disabled>
         <el-radio
@@ -20,6 +20,35 @@
       </el-radio-group>
     </div>
 
+    <!-- 多选题预览 -->
+    <div v-if="question.type === 'multi_choice'" class="options-container">
+      <el-checkbox-group disabled>
+        <el-checkbox
+          v-for="option in question.options"
+          :key="option.id"
+          :label="option.id"
+          class="option-item"
+        >
+          {{ option.text }}
+        </el-checkbox>
+      </el-checkbox-group>
+    </div>
+
+    <!-- 判断题预览 -->
+    <div v-if="question.type === 'judgment'" class="options-container">
+      <el-radio-group disabled>
+        <el-radio
+          v-for="option in question.options"
+          :key="option.id"
+          :label="option.id"
+          class="option-item"
+        >
+          {{ option.text }}
+        </el-radio>
+      </el-radio-group>
+    </div>
+
+    <!-- 文本题预览 -->
     <div v-if="question.type === 'text_input'" class="text-input-container">
       <el-input
         type="textarea"
@@ -62,7 +91,8 @@ defineProps({
   margin-right: 8px;
 }
 .options-container {
-  .el-radio-group {
+  .el-radio-group,
+  .el-checkbox-group {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -70,11 +100,13 @@ defineProps({
   .option-item {
     margin-bottom: 10px;
     // 穿透 el-radio 的样式，使其在 disabled 状态下依然清晰
-    :deep(.el-radio__input.is-disabled .el-radio__inner) {
+    :deep(.el-radio__input.is-disabled .el-radio__inner),
+    :deep(.el-checkbox__input.is-disabled .el-checkbox__inner) {
       background-color: #f5f7fa;
       border-color: #e4e7ed;
     }
-    :deep(.el-radio__label) {
+    :deep(.el-radio__label),
+    :deep(.el-checkbox__label) {
       color: #606266;
     }
   }

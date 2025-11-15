@@ -10,11 +10,11 @@
 
       <el-form :model="answers" label-position="top">
         <el-form-item
-          v-for="question in form.definition.questions"
+          v-for="(question, index) in form.definition.questions"
           :key="question.id"
-          :label="question.title"
+          :label="`${index + 1}. ${question.title}`"
         >
-          <!-- 动态渲染不同类型的问题 -->
+          <!-- 单选题 -->
           <div v-if="question.type === 'single_choice'">
             <el-radio-group v-model="answers[question.id]">
               <el-radio
@@ -27,6 +27,33 @@
             </el-radio-group>
           </div>
 
+          <!-- 【新增】多选题 -->
+          <div v-if="question.type === 'multi_choice'">
+            <el-checkbox-group v-model="answers[question.id]">
+              <el-checkbox
+                v-for="option in question.options"
+                :key="option.id"
+                :label="option.id"
+              >
+                {{ option.text }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </div>
+
+          <!-- 【新增】判断题 -->
+          <div v-if="question.type === 'judgment'">
+            <el-radio-group v-model="answers[question.id]">
+              <el-radio
+                v-for="option in question.options"
+                :key="option.id"
+                :label="option.id"
+              >
+                {{ option.text }}
+              </el-radio>
+            </el-radio-group>
+          </div>
+
+          <!-- 文本题 -->
           <div v-if="question.type === 'text_input'">
             <el-input
               v-model="answers[question.id]"
@@ -35,8 +62,6 @@
               placeholder="请输入您的回答"
             />
           </div>
-
-          <!-- 未来可以添加更多问题类型 -->
 
         </el-form-item>
 
@@ -62,10 +87,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPublicFormAPI, submitFormAPI, type PublicForm } from '@/api/form'
-import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -76,9 +100,18 @@ const form = ref<PublicForm | null>(null)
 const loading = ref(true)
 const submitting = ref(false)
 
-// 使用 reactive 来存储所有问题的答案
-// key 是 question.id, value 是答案
 const answers = reactive<Record<string, any>>({})
+
+// 【新增】监听 form 数据的变化，为多选题初始化答案数组
+watch(form, (newForm) => {
+  if (newForm) {
+    newForm.definition.questions.forEach(question => {
+      if (question.type === 'multi_choice') {
+        answers[question.id] = [] // 多选题的答案必须是数组
+      }
+    })
+  }
+})
 
 const fetchFormDefinition = async () => {
   try {
@@ -98,12 +131,10 @@ const handleSubmit = async () => {
     submitting.value = true
     await submitFormAPI(formKey, { data: answers })
 
-    // 提交成功后不再是 ElMessage 提示，而是直接跳转
     router.push({ name: 'success' })
 
   } catch (error) {
     console.error('Submission failed:', error)
-    // 错误消息已由 axios 拦截器处理
   } finally {
     submitting.value = false
   }
@@ -139,4 +170,17 @@ onMounted(() => {
   width: 100%;
   max-width: 800px;
 }
+
+/* 样式调整，让选项垂直排列 */
+:deep(.el-radio-group),
+:deep(.el-checkbox-group) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+:deep(.el-radio),
+:deep(.el-checkbox) {
+  margin-bottom: 8px;
+}
+
 </style>
